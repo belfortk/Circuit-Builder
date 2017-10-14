@@ -51,6 +51,16 @@ Board.prototype.removeGate = function(x, y) {
 	this.gates[x][y].size = scale * 0.125;
 };
 
+Board.prototype.addCircuit = function(oX, oY, iX, iY) { 
+	this.gates[oX][oY].circuits.outputX = this.gates[iX][iY].x
+	this.gates[oX][oY].circuits.outputY = this.gates[iX][iY].y
+	this.gates[iX][iY].circuits.inputX = this.gates[oX][oY].x
+	this.gates[iX][iY].circuits.inputY = this.gates[oX][oY].y
+	//console.log(this.gates[oX][oY].circuits.outputX);
+	//console.log(this.gates[oX][oY].circuits.outputY);
+}
+
+
 Board.prototype.setControls = function() {
 	var _this = this;
 	$("body").on("contextmenu", "#boardCanvas", function(e){ return false; });
@@ -83,7 +93,11 @@ Board.prototype.setControls = function() {
 			switch (e.which) {
 				case 1:
 					$( "#track" ).text(" mouse left move: " + trackCoords);
-
+					if (rX !== _this.clickedX || rY !== _this.clickedY) {
+						_this.addCircuit(_this.clickedX, _this.clickedY, rX, rY);
+						_this.clickedX = rX;
+						_this.clickedY = rY;
+					}
 					break;
 				case 3:
 					$( "#track" ).text(" mouse right move: " + trackCoords);
@@ -98,6 +112,8 @@ Board.prototype.setControls = function() {
 		var rX = Math.round(e.pageX / scale - 1); // Round coordinates based on scale
 		var rY = Math.round(e.pageY / scale - 2); // ^^^
 		if (_this.checkBounds(rX, rY)) {
+				_this.clickedX = -1;
+				_this.clickedY = -1;
 			switch (e.which) {
 				case 1:
 					$( "#click" ).text( " mouse left up: " + unclickCoords);
@@ -132,10 +148,21 @@ function Gate(x, y) {
 	this.y = y;
 	this.size = scale * 0.125;
 	this.color = "#cecece";
-	this.connects = [];
+	this.circuits = { inputX: -1,
+										inputY: -1,
+										outputX: -1,
+										outputY: -1 };
 }
 
 Gate.prototype.draw = function() {
+	if (this.circuits.outputX >= 0) {
+		ctx.beginPath();
+		ctx.lineWidth = scale*0.0625;
+		ctx.strokeStyle = "black";
+		ctx.moveTo(this.x, this.y);
+		ctx.lineTo(this.circuits.outputX, this.circuits.outputY);
+		ctx.stroke();
+	}
 	ctx.beginPath();
 	ctx.fillStyle = this.color;
 	ctx.arc(this.x, this.y, this.size, 0, 2*Math.PI);
@@ -147,7 +174,7 @@ board.setControls();
 
 function loop() {
 	ctx.fillStyle = "#f2f2f2";
-	ctx.fillRect(0, 0, width, height);
+	ctx.fillRect(0, 0, width/2 + scale, height);
 	board.draw();
 	requestAnimationFrame(loop);
 }
