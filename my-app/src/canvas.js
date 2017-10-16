@@ -1,42 +1,54 @@
-// ohailogic/main.js
-
-// css -   p:hover {
-//    background: yellow;
-//  }
+// src/canvas.js
 
 var canvas = document.querySelector("canvas");
 var ctx = canvas.getContext("2d");
+var body = document.querySelector("body");
 
-var width = canvas.width = $(window).width();
-var height = canvas.height = $(window).height();
+var width = canvas.width = canvas.offsetWidth;
+var height = canvas.height = canvas.offsetHeight;
+var bodyOffset = body.getBoundingClientRect();
+var canvasOffset = canvas.getBoundingClientRect();
 
-var scale = width * 0.01
+//console.log(bodyOffset.top, bodyOffset.right, bodyOffset.left, bodyOffset.bottom);
+
+var scale = Math.floor(width * 0.03);
+var xOffset = 0;
+var yOffset = 0;
 
 console.log("Width: " + width);
 console.log("Height: " + height);
 console.log("Scale: " + scale);
+console.log("Body Top offset: " + bodyOffset.top);
+console.log("Body Right offset: " + bodyOffset.right);
+console.log("Body Left offset: " + bodyOffset.left);
+console.log("Body Bottom offset: " + bodyOffset.bottom);
+console.log("Canvas Top offset: " + canvasOffset.top);
+console.log("Canvas Right offset: " + canvasOffset.right);
+console.log("Canvas Left offset: " + canvasOffset.left);
+console.log("Canvas Bottom offset: " + canvasOffset.bottom);
+console.log("xOffset: " + xOffset);
+console.log("yOffset: " + yOffset);
 
 function Board() {
 	// round width/height for easier calculation
 	this.width = width;
 	this.height = height;
 	this.gates = new Array();
-	this.iGates = 50;
-	this.jGates = 50;
-	var x = scale;
-	var y = scale;
+	this.iGates = Math.round(width / scale);
+	this.jGates = Math.round(height / scale);
+	var x = scale + xOffset;
+	var y = scale + yOffset;
+	console.log(x, y);
   for (var i = 0; i < this.iGates; i++) {
   	this.gates[i] = new Array();
   	for (var j = 0; j < this.jGates; j++) {
   		this.gates[i][j] = new Gate(x, y);
   		y += scale;
   	}
-  	y = scale;
+  	y = scale + yOffset;
   	x += scale;
-  	if (x > this.width) {
-  		break;
-  	}
   }
+  this.which = -1;
 	this.clickedX = -1;
 	this.clickedY = -1;
 }
@@ -60,24 +72,39 @@ Board.prototype.addCircuit = function(oX, oY, iX, iY) {
 	//console.log(this.gates[oX][oY].circuits.outputY);
 }
 
+Board.prototype.removeCircuit = function(oX, oY, iX, iY) {
+	this.gates[oX][oY].circuits.outputX = -1
+	this.gates[oX][oY].circuits.outputY = -1
+	this.gates[iX][iY].circuits.inputX = -1
+	this.gates[iX][iY].circuits.inputY = -1
+}
+
 
 Board.prototype.setControls = function() {
 	var _this = this;
 	$("body").on("contextmenu", "#boardCanvas", function(e){ return false; });
 	$(window).mousedown(function (e) {
 		var clickCoords = "(" + e.pageX + ", " + e.pageY + ")";
-		var rX = Math.round(e.pageX / scale - 1); // Round coordinates based on scale
-		var rY = Math.round(e.pageY / scale - 2); // ^^^
+		var rX = Math.round((e.pageX - bodyOffset.left - canvasOffset.left - xOffset) / scale) - 1; // Round coordinates based on scale
+		var rY = Math.round((e.pageY - bodyOffset.top - canvasOffset.top - yOffset) / scale) - 1; // ^^^
+		console.log("rX: " + rX);
+		console.log((e.pageX - bodyOffset.left - xOffset) / scale);
+		console.log("rY: " + rY);
+		console.log((e.pageY - bodyOffset.top - yOffset) / scale);
 		if (_this.checkBounds(rX, rY)) {
 			switch (e.which) {
 				case 1:
 					$( "#click" ).text( " mouse left down: " + clickCoords);
 					_this.clickedX = rX;
 					_this.clickedY = rY;
+					_this.which = 1;
 					_this.addGate(rX, rY);
 					break;
 				case 3: 
 					$( "#click" ).text( " mouse right down: " + clickCoords);
+					_this.clickedX = rX;
+					_this.clickedY = rY;
+					_this.which = 3;
 					_this.removeGate(rX, rY);
 					break;
 			}
@@ -86,11 +113,10 @@ Board.prototype.setControls = function() {
 
 	$(window).mousemove(function (e) {
 		var trackCoords = "(" + e.pageX + ", " + e.pageY + ")";
-		var rX = Math.round(e.pageX / scale - 1); // Round coordinates based on scale
-		var rY = Math.round(e.pageY / scale - 2); // ^^^
-		$( "#track" ).text(" mouse move: " + trackCoords);
+		var rX = Math.round((e.pageX - bodyOffset.left - canvasOffset.left - xOffset) / scale) - 1; // Round coordinates based on scale
+		var rY = Math.round((e.pageY - bodyOffset.top - canvasOffset.top - yOffset) / scale) - 1; // ^^^
 		if (_this.checkBounds(rX, rY) && _this.clickedX > -1 && _this.clickedY > -1) {
-			switch (e.which) {
+			switch (_this.which) {
 				case 1:
 					$( "#track" ).text(" mouse left move: " + trackCoords);
 					if (rX !== _this.clickedX || rY !== _this.clickedY) {
@@ -101,27 +127,34 @@ Board.prototype.setControls = function() {
 					break;
 				case 3:
 					$( "#track" ).text(" mouse right move: " + trackCoords);
+					if (rX !== _this.clickedX || rY !== _this.clickedY) {
+						_this.removeCircuit(_this.clickedX, _this.clickedY, rX, rY);
+						_this.clickedX = rX;
+						_this.clickedY = rY;
+					}
 					break;
 			}
-
+		} else {
+			_this.clickedX = -1;
+			_this.clickedY = -1;
+			_this.which = -1;
 		}
 	});
 
 	$(window).mouseup(function (e) {
 		var unclickCoords = "(" + e.pageX + ", " + e.pageY + ")";
-		var rX = Math.round(e.pageX / scale - 1); // Round coordinates based on scale
-		var rY = Math.round(e.pageY / scale - 2); // ^^^
-		if (_this.checkBounds(rX, rY)) {
-				_this.clickedX = -1;
-				_this.clickedY = -1;
-			switch (e.which) {
-				case 1:
-					$( "#click" ).text( " mouse left up: " + unclickCoords);
-					break;
-				case 3: 
-					$( "#click" ).text( " mouse right up: " + unclickCoords);
-					break;
-			}
+		var rX = Math.round((e.pageX - bodyOffset.left - canvasOffset.left - xOffset) / scale) - 1; // Round coordinates based on scale
+		var rY = Math.round((e.pageY - bodyOffset.top - canvasOffset.top - yOffset) / scale) - 1; // ^^^
+		_this.clickedX = -1;
+		_this.clickedY = -1;
+		_this.which = -1;
+		switch (e.which) {
+			case 1:
+				$( "#click" ).text( " mouse left up: " + unclickCoords);
+				break;
+			case 3: 
+				$( "#click" ).text( " mouse right up: " + unclickCoords);
+				break;
 		}
 	});
 };
@@ -155,14 +188,28 @@ function Gate(x, y) {
 }
 
 Gate.prototype.draw = function() {
-	if (this.circuits.outputX >= 0) {
-		ctx.beginPath();
-		ctx.lineWidth = scale*0.0625;
-		ctx.strokeStyle = "black";
-		ctx.moveTo(this.x, this.y);
-		ctx.lineTo(this.circuits.outputX, this.circuits.outputY);
-		ctx.stroke();
+	if (this.circuits.outputX > -1 && this.circuits.outputY > -1) {
+		if (this.circuits.outputX >= this.x && this.circuits.outputY >= this.y) {
+			ctx.beginPath();
+			ctx.lineWidth = scale*0.0625;
+			ctx.strokeStyle = "black";
+			ctx.moveTo(this.x, this.y);
+			ctx.lineTo(this.circuits.outputX, this.circuits.outputY);
+			ctx.stroke();
+		}
 	}
+
+	if (this.circuits.inputX > -1 && this.circuits.inputY > -1) {
+		if (this.circuits.inputX >= this.x && this.circuits.inputY >= this.y) {
+			ctx.beginPath();
+			ctx.lineWidth = scale*0.0625;
+			ctx.strokeStyle = "black";
+			ctx.moveTo(this.x, this.y);
+			ctx.lineTo(this.circuits.inputX, this.circuits.inputY);
+			ctx.stroke();
+		}
+	}
+
 	ctx.beginPath();
 	ctx.fillStyle = this.color;
 	ctx.arc(this.x, this.y, this.size, 0, 2*Math.PI);
@@ -174,7 +221,7 @@ board.setControls();
 
 function loop() {
 	ctx.fillStyle = "#f2f2f2";
-	ctx.fillRect(0, 0, width/2 + scale, height);
+	ctx.fillRect(0, 0, width, height);
 	board.draw();
 	requestAnimationFrame(loop);
 }
