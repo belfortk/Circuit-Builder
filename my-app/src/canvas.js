@@ -8,6 +8,7 @@ var width = canvas.width = canvas.offsetWidth;
 var height = canvas.height = canvas.offsetHeight;
 var bodyOffset = body.getBoundingClientRect();
 var canvasOffset = canvas.getBoundingClientRect();
+var boot = false;
 
 //console.log(bodyOffset.top, bodyOffset.right, bodyOffset.left, bodyOffset.bottom);
 
@@ -53,14 +54,16 @@ function Board() {
 	this.clickedY = -1;
 }
 
-Board.prototype.addGate = function(x, y) {
+Board.prototype.addGate = function(x, y, type) {
 	this.gates[x][y].color = "#ba0000";
 	this.gates[x][y].size = scale * 0.25;
+	this.gates[x][y].type = type;
 };
 
 Board.prototype.removeGate = function(x, y) {
 	this.gates[x][y].color = "#cecece";
 	this.gates[x][y].size = scale * 0.125;
+	this.gates[x][y].type = "none";
 };
 
 Board.prototype.addCircuit = function(oX, oY, iX, iY) { 
@@ -181,6 +184,7 @@ function Gate(x, y) {
 	this.y = y;
 	this.size = scale * 0.125;
 	this.color = "#cecece";
+	this.type = "none";
 	this.circuits = { inputX: -1,
 										inputY: -1,
 										outputX: -1,
