@@ -24,13 +24,13 @@ html {
   color: #333333;
 }
 
-#boardCanvas {
+#svg {
   padding: 0;
   margin: auto;
   display: block;
   position: absolute;
-  top: 0
-  bottom: 100;
+  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
 }
