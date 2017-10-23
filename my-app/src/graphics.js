@@ -2,98 +2,119 @@
 
 var svg = document.getElementById("svg");
 var body = document.getElementById("body");
-svg.viewBox = "0 0 600 1200";
+svg.viewBox = "0 0 100 100";
 
 var s = Snap(svg);
 
-var width = 1200;
-var height = 600;
-var scale = Math.round(width * 0.03)
-var svgOffset = svg.getBoundingClientRect();
-var bodyOffset = body.getBoundingClientRect();
-var xOffset = svgOffset.left + bodyOffset.left;
-var yOffset = svgOffset.top + bodyOffset.top;
-var rect = s.rect(0, 0, width, height);
-rect.attr({fill: "#f2f2f2"});
+var width = window.screen.availWidth;
+var height = window.screen.availHeight;
 
 console.log("Width: " + width);
 console.log("Height: " + height);
-console.log("Scale: " + scale);
-console.log("Offset: " + xOffset + " " + yOffset);
 
-function Board() {
+function Board () {
 	// round width/height for easier calculation
-	this.width = width;
-	this.height = height;
-	this.gates = new Array();
-	this.iGates = Math.round(width/scale);
-	this.jGates = Math.round(width/scale);
-	var x = scale;
-	var y = scale;
-  for (var i = 0; i < this.iGates; i++) {
-  	this.gates[i] = new Array();
-  	for (var j = 0; j < this.jGates; j++) {
-  		this.gates[i][j] = new Gate(x, y);
-  		this.gates[i][j].setControls();
-  		y += scale;
-  	}
-  	y = scale;
-  	x += scale;
-  }
+	this.width = width * 0.4;
+	this.height = this.width;
+	this.scale = width * 0.02;
+	this.xOffset = width * 0.3;
+	this.yOffset = height * 0.15;
+	this.background = s.rect(this.xOffset, this.yOffset, this.width, this.height).attr({fill: "#ffffff"});
+	this.gridX = [];
+	this.gridY = [];
+	var lineAttr = {
+		"stroke": "#cecece",
+		"stroke-width": 1,
+	};
+
+	for (var i = this.xOffset; i < (this.width+this.xOffset); i+=this.scale) {
+		this.gridX.push(s.line(i, this.yOffset, i, (this.height+this.yOffset)).attr(lineAttr));
+	}
+	for (var i = this.yOffset; i < (this.height+this.yOffset); i+=this.scale) {
+		this.gridY.push(s.line(this.xOffset, i, (this.width+this.xOffset), i).attr(lineAttr));
+	}
+
+	this.centerX = (this.width + this.xOffset*2) * 0.5;
+	this.centerY = (this.height + this.yOffset*2) * 0.5;
+
+	$("body").on("contextmenu", "#svg", function(e){ return false; });
+
 }
 
-Board.prototype.checkBounds = function(x, y) {
-	if (x >= 0 && x < this.gates.length) {
-		if (y >= 0 && y < this.gates[x].length) {
-			return true;
+function GGate (x, y, size, type, label) {
+	var setControls = function (gate) {
+		var onmove = function (dx, dy, posx, posy) {
+			if (shift) {
+			} else {
+				this.attr({cx: posx, cy: posy});
+				//console.log("Moving!");
+			}
 		}
-	}
-	return false;
-};
 
-Board.prototype.draw = function() {
-	for (var i = 0; i < this.iGates; i++) {
-		for (var j = 0; j < this.jGates; i++) {
-
+		var ondragstart = function (x, y) {
+			var tint = this.attr("tint");
+			var color = this.attr("fill");
+			this.attr({fill: tint, tint: color});
+			//console.log("Starting!");
 		}
+
+		var ondragend = function () {
+			var color = this.attr("tint");
+			var tint = this.attr("fill");
+			this.attr({fill: color, tint: tint});
+			//console.log("Stopping!");
+		}
+
+		var onmousedown = function (e) {
+			if (e.shiftKey) {
+				if (clicked.from === null) {
+					clicked.from = this;
+				} else {
+					var pathDef = "M" + clicked.from.attr("cx") + " " + clicked.from.attr("cy") + "L" + this.attr("cx") + " " + this.attr("cy");
+					var path = s.path(pathDef);
+					clicked.from.node.parentElement.appendChild(clicked.from.node);
+					this.node.parentElement.appendChild(this.node);
+					path.attr({"stroke": "#000000", "stroke-width": 2});
+					var g = s.group(clicked.from, this);
+					clicked.to = this;
+				}
+			} else {
+				clicked.from = this;
+			}
+		}
+
+		var onmouseup = function (e) {
+			if (e.button === 2) {
+				clicked.from = null;
+				this.remove();
+			}
+			if (e.shiftKey) {
+				if (clicked.from !== null && clicked.to !== null) {
+					clicked.from = null;
+					clicked.to = null;
+				}
+			}	
+		}
+
+		gate.drag(onmove, ondragstart, ondragend);
+		gate.mousedown(onmousedown);
+		gate.mouseup(onmouseup);
 	}
+	var gate =  s.circle(x, y, size);
+	var color = "#ffffff";
+	var tint = "#ffffff";
+	if (type === "and") {
+		color = "#ff3939";
+		tint = "#ff7474"
+	} else if (type === "not") {
+		color = "#ffe339";
+		tint = "#ffeb74";
+	} else {
+		color = "#3950ff";
+		tint = "#7484ff";
+	}
+	gate.attr({fill: color, tint: tint, logic: type, label: label});
+
+	setControls(gate);
+	return gate;
 }
-
-function Gate(x, y) {
-	this.x = x;
-	this.y = y;
-	this.size = scale * 0.125;
-	this.color = "#cecece";
-	this.mouseDown = false;
-	this.circuits = { inputX: -1,
-										inputY: -1,
-										outputX: -1,
-										outputY: -1 };
-	this.gate = s.circle(x, y, this.size);
-	this.gate.attr({fill: this.color});
-
-}
-
-Gate.prototype.setControls = function() {
-	var onmove = function(dx, dy, posx, posy) {
-		console.log(dx, dy, posx, posy);
-		this.attr({cx: (posx - xOffset), cy: (posy - yOffset/2)});
-		console.log("Moving!");
-	}
-
-	var ondragstart = function(x, y) {
-		this.attr({fill: "#000"});
-		//console.log(x, y);
-		console.log("Starting!");
-	}
-
-	var ondragend = function() {
-		this.attr({fill: "#cecece"});
-		console.log("Stopping!");
-	}
-
-	this.gate.drag(onmove, ondragstart, ondragend);
-	
-}
-
-var board = new Board();
