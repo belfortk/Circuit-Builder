@@ -66,8 +66,9 @@ function GGate (x, y, size, type, label) {
 		}
 
 		var onmousedown = function (e) {
+			console.log(this.attr("type"));
 			if (e.shiftKey) {
-				if (clicked.from === null) {
+				if (clicked.from === null || clicked.from === this) {
 					clicked.from = this;
 				} else {
 					var pathDef = "M" + clicked.from.attr("cx") + " " + clicked.from.attr("cy") + "L" + this.attr("cx") + " " + this.attr("cy");
@@ -109,11 +110,17 @@ function GGate (x, y, size, type, label) {
 	} else if (type === "not") {
 		color = "#ffe339";
 		tint = "#ffeb74";
-	} else {
+	} else if (type === "or") {
 		color = "#3950ff";
 		tint = "#7484ff";
+	} else if (type === "in") {
+		color = "#2d2d2d";
+		tint = "#6c6c6c";
+	} else {
+		color = "#ababab";
+		tint = "#eaeaea";
 	}
-	gate.attr({fill: color, tint: tint, logic: type, label: label});
+	gate.attr({fill: color, tint: tint, type: type, label: label});
 
 	setControls(gate);
 	return gate;

@@ -1,27 +1,75 @@
 // ../src/logic.js
 
-function LGate (x, y, type, label) {
-	this.x = x;
-	this.y = y;
-	this.logic = type;
+function LGate (type, label) {
+	this.type = type;
 	this.label = label;
-	this.input = {1: null, 2: null};
-	this.output = null;
+	this.from = [];
+	this.to = [];
+	this.value = [];
 }
 
-LGate.prototype.logic = function(input) {
-
-}
-
-var connect =  function (from, to) {
-	from.output = to;
-	if (to.input[1] === null) {
-		to.input[1] = from;
-	} else {
-		to.input[2] = from;
+var logic = function(gate) {
+	console.log(gate.label + ": " + gate.value);
+	var result = [];
+	var next = function(gate) {
+		if ((gate.type === "and" || gate.type === "or") && gate.value.length === 2) {
+			//console.log(gate);
+			return true;
+		} else if (gate.type === "not" || gate.type === "out") {
+			return true;
+		} else {
+			return false;
+		}
 	}
-}
 
-var run = function (start, input) {
+	switch (gate.type) {
+		case "and":
+			for (var i = 0; i < gate.to.length; i++) {
+				gate.to[i].value.push(gate.value[0] & gate.value[1]);
+				if (next(gate.to[i])) {
+					result = logic(gate.to[i]);
+				}
+			}
+			gate.value = [];
+			break;
+		case "or":
+			for (var i = 0; i < gate.to.length; i++) {
+				gate.to[i].value.push(gate.value[0] | gate.value[1]);
+				if (next(gate.to[i])) {
+					result = logic(gate.to[i]);
+				}
+			}
+			gate.value = [];
+			break;
+		case "not":
+			for (var i = 0; i < gate.to.length; i++) {
+				gate.to[i].value.push(gate.value[0] ^ 1);
+				if (next(gate.to[i])) {
+					result = logic(gate.to[i]);
+				}
+			}
+			gate.value = [];
+			break;
+		case "in":
+			for (var i = 0; i < gate.to.length; i++) {
+				gate.to[i].value = gate.value;
+				if (next(gate.to[i])) {
+					result = logic(gate.to[i]);
+				}
+			}
+			gate.value = [];
+			break;
+		default:
+			result = gate.value;
+			gate.value = [];
+			return result;
+			break;
+	}
+	return result;
+};
 
-}
+var connect =  function (fromGate, toGate) {
+	fromGate.to.push(toGate);
+	toGate.from.push(fromGate);
+};
+
