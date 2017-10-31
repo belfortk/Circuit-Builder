@@ -41,12 +41,11 @@ function Board () {
 
 }
 
-function GGate (x, y, size, type, label) {
+function Gate (x, y, size, type, label) {
 	var setControls = function (gate) {
 		var onmove = function (dx, dy, posx, posy) {
-			if (shift) {
-			} else {
-				this.attr({cx: posx, cy: posy});
+			if (!shift) {
+				this.attr({transform: this.data('origTransform') + (this.data('origTransform') ? "T" : "t") + [dx, dy]});
 				//console.log("Moving!");
 			}
 		}
@@ -66,7 +65,7 @@ function GGate (x, y, size, type, label) {
 		}
 
 		var onmousedown = function (e) {
-			console.log(this.attr("type"));
+			//console.log(this.attr("type"));
 			if (e.shiftKey) {
 				if (clicked.from === null || clicked.from === this) {
 					clicked.from = this;
@@ -97,31 +96,48 @@ function GGate (x, y, size, type, label) {
 			}	
 		}
 
-		gate.drag(onmove, ondragstart, ondragend);
+		//gate.drag(onmove, ondragstart, ondragend);
+		gate.drag();
 		gate.mousedown(onmousedown);
 		gate.mouseup(onmouseup);
 	}
-	var gate =  s.circle(x, y, size);
+	this.type = type;
+	this.label = label;
+	this.from = [];
+	this.to = [];
+	this.value = [];
+	
 	var color = "#ffffff";
 	var tint = "#ffffff";
-	if (type === "and") {
-		color = "#ff3939";
-		tint = "#ff7474"
-	} else if (type === "not") {
-		color = "#ffe339";
-		tint = "#ffeb74";
-	} else if (type === "or") {
-		color = "#3950ff";
-		tint = "#7484ff";
-	} else if (type === "in") {
-		color = "#2d2d2d";
-		tint = "#6c6c6c";
-	} else {
-		color = "#ababab";
-		tint = "#eaeaea";
+	switch(type) {
+		case "and":
+			this.gate = makeAndGate(s, x, y);
+			color = "#ff3939";
+			tint = "#ff7474";
+			break;
+		case "not":
+			this.gate = makeNotGate(s, x, y);
+			color = "#ffe339";
+			tint = "#ffeb74";
+			break;
+		case "or":
+			this.gate = makeOrGate(s, x, y);
+			color = "#3950ff";
+			tint = "#7484ff";
+			break;
+		case "in":
+			this.gate = makeInGate(s, x, y);
+			color = "#2d2d2d";
+			tint = "#6c6c6c";
+			break;
+		default:
+			this.gate = makeOutGate(s, x, y);
+			color = "#ababab";
+			tint = "#eaeaea";
+			break;
 	}
-	gate.attr({fill: color, tint: tint, type: type, label: label});
 
-	setControls(gate);
-	return gate;
+	this.gate.attr({fill: color, tint: tint, type: type, label: label});
+
+	setControls(this.gate);
 }

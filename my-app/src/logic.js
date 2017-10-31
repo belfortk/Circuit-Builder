@@ -1,13 +1,5 @@
 // ../src/logic.js
 
-function LGate (type, label) {
-	this.type = type;
-	this.label = label;
-	this.from = [];
-	this.to = [];
-	this.value = [];
-}
-
 var logic = function(gate) {
 	console.log(gate.label + ": " + gate.value);
 	var result = [];
