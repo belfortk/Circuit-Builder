@@ -4,17 +4,17 @@ var logic = function(gate) {
 	console.log(gate.label + ": " + gate.value);
 	var result = [];
 	var next = function(gate) {
-		if ((gate.type === "and" || gate.type === "or") && gate.value.length === 2) {
+		if ((gate.logic === "and" || gate.logic === "or") && gate.value.length === 2) {
 			//console.log(gate);
 			return true;
-		} else if (gate.type === "not" || gate.type === "out") {
+		} else if (gate.logic === "not" || gate.logic === "out") {
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	switch (gate.type) {
+	switch (gate.logic) {
 		case "and":
 			for (var i = 0; i < gate.to.length; i++) {
 				gate.to[i].value.push(gate.value[0] & gate.value[1]);

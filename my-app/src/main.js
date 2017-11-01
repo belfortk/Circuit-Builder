@@ -1,14 +1,25 @@
 // ../src/main.js
+var svg = document.getElementById("svg");
+var body = document.getElementById("body");
+svg.viewBox = "0 0 100 100";
 
-var board = new Board();
+var s = Snap(svg);
+
+var width = window.screen.availWidth;
+var height = window.screen.availHeight;
+
+console.log("Width: " + width);
+console.log("Height: " + height);
+
+var board = new Board(s, width, height);
 var circuitMap = new Map();
-console.log(board.centerX, board.centerY);
-var gate1 = new Gate(board.centerX-board.scale, board.centerY+board.scale, board.scale*0.5, "and", "A1");
-var gate2 = new Gate(board.centerX+board.scale, board.centerY+board.scale, board.scale*0.5, "not", "N1");
-var gate3 = new Gate(board.centerX-board.scale, board.centerY-board.scale, board.scale*0.5, "or", "O1");
-var gate4 = new Gate(board.centerX+board.scale, board.centerY-board.scale, board.scale*0.5, "and", "A2");
-var inGate = new Gate(board.centerX-board.scale*2, board.centerY, board.scale*0.5, "in", "I1");
-var outGate = new Gate(board.centerX+board.scale*2, board.centerY, board.scale*0.5, "out", "OU1");
+//console.log(board.centerX, board.centerY);
+var gate1 = new Gate(s, board.centerX-board.scale, board.centerY+board.scale, board.scale*0.5, "and", "A1");
+var gate2 = new Gate(s, board.centerX+board.scale, board.centerY+board.scale, board.scale*0.5, "not", "N1");
+var gate3 = new Gate(s, board.centerX-board.scale, board.centerY-board.scale, board.scale*0.5, "or", "O1");
+var gate4 = new Gate(s, board.centerX+board.scale, board.centerY-board.scale, board.scale*0.5, "and", "A2");
+var inGate = new Gate(s, board.centerX-board.scale*2, board.centerY, board.scale*0.5, "in", "I1");
+var outGate = new Gate(s, board.centerX+board.scale*2, board.centerY, board.scale*0.5, "out", "OU1");
 
 var clicked = {from: null, to: null};
 
@@ -32,15 +43,18 @@ $("svg").mousedown(function (e) {
 				}
 				break;
 			case 3:
-				circuitMap.delete(clicked.from.attr("label"));
-				console.log(circuitMap.size);
-				break;
+				if (clicked.from !== null) {
+					circuitMap.delete(clicked.from.attr("label"));
+					clicked.from.remove();
+					clicked.from = clicked.to = null;
+					console.log(circuitMap.size);
+					break;
+				}
 		}
 	}
 });
 
 $("svg").mouseup(function (e) {
-
 });
 
 var run = function(input) {

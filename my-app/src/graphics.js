@@ -1,18 +1,6 @@
 // ../src/graphics.js
 
-var svg = document.getElementById("svg");
-var body = document.getElementById("body");
-svg.viewBox = "0 0 100 100";
-
-var s = Snap(svg);
-
-var width = window.screen.availWidth;
-var height = window.screen.availHeight;
-
-console.log("Width: " + width);
-console.log("Height: " + height);
-
-function Board () {
+function Board (s, width, height) {
 	// round width/height for easier calculation
 	this.width = width * 0.4;
 	this.height = this.width;
@@ -38,106 +26,108 @@ function Board () {
 	this.centerY = (this.height + this.yOffset*2) * 0.5;
 
 	$("body").on("contextmenu", "#svg", function(e){ return false; });
-
 }
 
-function Gate (x, y, size, type, label) {
-	var setControls = function (gate) {
-		var onmove = function (dx, dy, posx, posy) {
-			if (!shift) {
-				this.attr({transform: this.data('origTransform') + (this.data('origTransform') ? "T" : "t") + [dx, dy]});
-				//console.log("Moving!");
-			}
-		}
-
-		var ondragstart = function (x, y) {
-			var tint = this.attr("tint");
-			var color = this.attr("fill");
-			this.attr({fill: tint, tint: color});
-			//console.log("Starting!");
-		}
-
-		var ondragend = function () {
-			var color = this.attr("tint");
-			var tint = this.attr("fill");
-			this.attr({fill: color, tint: tint});
-			//console.log("Stopping!");
-		}
-
-		var onmousedown = function (e) {
-			//console.log(this.attr("type"));
-			if (e.shiftKey) {
-				if (clicked.from === null || clicked.from === this) {
-					clicked.from = this;
-				} else {
-					var pathDef = "M" + clicked.from.attr("cx") + " " + clicked.from.attr("cy") + "L" + this.attr("cx") + " " + this.attr("cy");
-					var path = s.path(pathDef);
-					clicked.from.node.parentElement.appendChild(clicked.from.node);
-					this.node.parentElement.appendChild(this.node);
-					path.attr({"stroke": "#000000", "stroke-width": 2});
-					var g = s.group(clicked.from, this);
-					clicked.to = this;
-				}
-			} else {
-				clicked.from = this;
-			}
-		}
-
-		var onmouseup = function (e) {
-			if (e.button === 2) {
-				clicked.from = null;
-				this.remove();
-			}
-			if (e.shiftKey) {
-				if (clicked.from !== null && clicked.to !== null) {
-					clicked.from = null;
-					clicked.to = null;
-				}
-			}	
-		}
-
-		//gate.drag(onmove, ondragstart, ondragend);
-		gate.drag();
-		gate.mousedown(onmousedown);
-		gate.mouseup(onmouseup);
-	}
-	this.type = type;
+function Gate (s, x, y, size, logic, label) {
+	this.logic = logic;
 	this.label = label;
 	this.from = [];
 	this.to = [];
 	this.value = [];
 	
 	var color = "#ffffff";
-	var tint = "#ffffff";
-	switch(type) {
+	switch(logic) {
 		case "and":
 			this.gate = makeAndGate(s, x, y);
 			color = "#ff3939";
-			tint = "#ff7474";
 			break;
 		case "not":
 			this.gate = makeNotGate(s, x, y);
 			color = "#ffe339";
-			tint = "#ffeb74";
 			break;
 		case "or":
 			this.gate = makeOrGate(s, x, y);
 			color = "#3950ff";
-			tint = "#7484ff";
 			break;
 		case "in":
 			this.gate = makeInGate(s, x, y);
 			color = "#2d2d2d";
-			tint = "#6c6c6c";
 			break;
 		default:
 			this.gate = makeOutGate(s, x, y);
 			color = "#ababab";
-			tint = "#eaeaea";
 			break;
 	}
 
-	this.gate.attr({fill: color, tint: tint, type: type, label: label});
-
-	setControls(this.gate);
+	this.gate.attr({logic: logic, label: label});
+	this.setControls();
 }
+
+Gate.prototype.setControls = function() {
+	var onmove = function (dx, dy, x, y, e) {
+		if (!e.shiftKey) {
+			switch(this.attr("logic")) {
+				case "and":
+					this.attr({transform: "translate(" + (x-13) + "," + (y-13) + ") scale(0.25)"});
+					break;
+				case "not":
+					this.attr({transform: "translate(" +  (x-34) + "," + (y-6) + ") scale(0.25)"});
+					break;
+				case "or":
+					this.attr({transform: "translate(" +  (x-15) + "," + (y-15) + ") scale(0.25)"});
+					break;
+				case "in":
+					this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
+					break;
+				case "out":
+					this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
+					break;
+			}
+			this.attr({cx: x, cy: y});
+		}
+	};
+
+	var onstart = function (x, y, e) {
+		this.attr({opacity: 0.5});
+	};
+
+	var onend = function (x, y, e) {
+		this.attr({opacity: 1});
+	};
+
+	var onmousedown = function (e) {
+		//console.log(this.attr("logic"));
+		this.attr({opacity: 0.5});
+		if (e.button === 0) {
+			if (e.shiftKey) {
+				if (clicked.from === null || clicked.from === this) {
+					clicked.from = this;
+				} else {
+					console.log(this.attr("cx"), this.attr("cy"));
+					var pathDef = "M" + clicked.from.attr("cx") + " " + clicked.from.attr("cy") + "L" + this.attr("cx") + " " + this.attr("cy");
+					var path = s.path(pathDef);
+					clicked.from.node.parentElement.appendChild(clicked.from.node);
+					this.node.parentElement.appendChild(this.node);
+					path.attr({"stroke": "#000000", "stroke-width": 2});
+					clicked.to = this;
+				}
+			} else {
+				clicked.from = clicked.to = null; 
+			}
+		} else {
+			clicked.from = this;
+		}
+	};
+
+	var onmouseup = function (e) {
+		this.attr({opacity: 1});
+		if (e.shiftKey) {
+			if (clicked.from !== null && clicked.to !== null) {
+				clicked.from = clicked.to = null;
+			}
+		}	
+	};
+	this.gate.drag(onmove, onstart, onend);
+	this.gate.mousedown(onmousedown);
+	this.gate.mouseup(onmouseup);
+};
