@@ -74,7 +74,7 @@ Gate.prototype.setControls = function() {
 					this.attr({transform: "translate(" +  (x-34) + "," + (y-6) + ") scale(0.25)"});
 					break;
 				case "or":
-					this.attr({transform: "translate(" +  (x-15) + "," + (y-15) + ") scale(0.25)"});
+					this.attr({transform: "translate(" +  (x-27) + "," + (y-19) + ") scale(0.25)"});
 					break;
 				case "in":
 					this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
@@ -88,27 +88,21 @@ Gate.prototype.setControls = function() {
 	};
 
 	var onstart = function (x, y, e) {
-		this.attr({opacity: 0.5});
+		
 	};
 
 	var onend = function (x, y, e) {
-		this.attr({opacity: 1});
+		
 	};
 
 	var onmousedown = function (e) {
 		//console.log(this.attr("logic"));
-		this.attr({opacity: 0.5});
+		this.node.querySelector("#box").style.visibility = "visible";
 		if (e.button === 0) {
 			if (e.shiftKey) {
 				if (clicked.from === null || clicked.from === this) {
 					clicked.from = this;
 				} else {
-					console.log(this.attr("cx"), this.attr("cy"));
-					var pathDef = "M" + clicked.from.attr("cx") + " " + clicked.from.attr("cy") + "L" + this.attr("cx") + " " + this.attr("cy");
-					var path = s.path(pathDef);
-					clicked.from.node.parentElement.appendChild(clicked.from.node);
-					this.node.parentElement.appendChild(this.node);
-					path.attr({"stroke": "#000000", "stroke-width": 2});
 					clicked.to = this;
 				}
 			} else {
@@ -120,14 +114,47 @@ Gate.prototype.setControls = function() {
 	};
 
 	var onmouseup = function (e) {
-		this.attr({opacity: 1});
+
 		if (e.shiftKey) {
 			if (clicked.from !== null && clicked.to !== null) {
 				clicked.from = clicked.to = null;
 			}
 		}	
 	};
+
+	var onmouseover = function (e) {
+		this.attr({stroke: "#ff84dd", "stroke-width": 10});
+	};
+
+	var onmouseout = function (e) {
+		this.attr({stroke: "none", "stroke-width": 0});
+	};
+
 	this.gate.drag(onmove, onstart, onend);
 	this.gate.mousedown(onmousedown);
 	this.gate.mouseup(onmouseup);
+	this.gate.mouseover(onmouseover);
+	this.gate.mouseout(onmouseout);
 };
+
+function Circuit (s, fromGate, toGate, label) {
+	fromGate.to.push(toGate);
+	toGate.from.push(fromGate);
+	this.fromGate = fromGate;
+	this.toGate = toGate;
+	this.label = label; 
+	this.path = s.path("M" + fromGate.gate.attr("cx") + " " + fromGate.gate.attr("cy") + "L" + toGate.gate.attr("cx") + " " + toGate.gate.attr("cy"));
+	this.path.attr({"stroke": "#000000", "stroke-width": 2});
+	this.fromGroup = s.g(this.path, this.toGate.gate, this.fromGate.gate); 
+	this.setControls();
+	this.fromGate.gate.node.parentElement.appendChild(this.fromGate.gate.node);
+	this.toGate.gate.node.parentElement.appendChild(this.toGate.gate.node);
+}
+
+
+Circuit.prototype.setControls = function () {
+	this.fromGroup.drag();
+	this.fromGate.gate.undrag();
+	//this.toGroup.drag();
+	this.toGate.gate.undrag();
+}
