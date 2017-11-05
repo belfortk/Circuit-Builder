@@ -59,9 +59,3 @@ var logic = function(gate) {
 	}
 	return result;
 };
-
-var connect =  function (fromGate, toGate) {
-	fromGate.to.push(toGate);
-	toGate.from.push(fromGate);
-};
-

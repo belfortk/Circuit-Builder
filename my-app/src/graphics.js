@@ -26,11 +26,40 @@ function Board (s, width, height) {
 	this.centerY = (this.height + this.yOffset*2) * 0.5;
 
 	$("body").on("contextmenu", "#svg", function(e){ return false; });
+	this.setControls(s, this.background);
 }
+
+Board.prototype.setControls = function (s, board) {
+	var that = this;
+	var onmousedown = function(e) {
+		if (clicked.from !== null) {
+			switch (clicked.from.logic) {
+				case "not":
+					s.select("#"+clicked.from.label+"CI0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CO0").attr({visibility: "hidden"});
+					break;
+				case "in":
+					s.select("#"+clicked.from.label+"CO0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CO1").attr({visibility: "hidden"});
+					break;
+				case "out":
+					s.select("#"+clicked.from.label+"CI0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CI1").attr({visibility: "hidden"});
+					break;
+					default:
+					s.select("#"+clicked.from.label+"CI0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CI1").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CO0").attr({visibility: "hidden"});
+					break;
+			}
+			clicked.from = null;
+		}
+	}
+	board.mousedown(onmousedown);
+};
 
 function Gate (s, x, y, size, logic, label) {
 	this.logic = logic;
-	this.label = label;
 	this.from = [];
 	this.to = [];
 	this.value = [];
@@ -38,98 +67,144 @@ function Gate (s, x, y, size, logic, label) {
 	var color = "#ffffff";
 	switch(logic) {
 		case "and":
-			this.gate = makeAndGate(s, x, y);
+			this.label = "A" + label;
+			this.gate = makeAndGate(s, x, y, this.label);
 			color = "#ff3939";
 			break;
 		case "not":
-			this.gate = makeNotGate(s, x, y);
+			this.label = "N" + label;
+			this.gate = makeNotGate(s, x, y, this.label);
 			color = "#ffe339";
 			break;
 		case "or":
-			this.gate = makeOrGate(s, x, y);
+			this.label = "O" + label;
+			this.gate = makeOrGate(s, x, y, this.label);
 			color = "#3950ff";
 			break;
 		case "in":
-			this.gate = makeInGate(s, x, y);
+			this.label = "I" + label;
+			this.gate = makeInGate(s, x, y, this.label);
 			color = "#2d2d2d";
 			break;
 		default:
-			this.gate = makeOutGate(s, x, y);
+			this.label = "P" + label;
+			this.gate = makeOutGate(s, x, y, this.label);
 			color = "#ababab";
 			break;
 	}
-
-	this.gate.attr({logic: logic, label: label});
+	s.select("#"+this.label+"S").attr({fill: color});
 	this.setControls();
 }
 
 Gate.prototype.setControls = function() {
+	var that = this;
 	var onmove = function (dx, dy, x, y, e) {
-		if (!e.shiftKey) {
-			switch(this.attr("logic")) {
-				case "and":
-					this.attr({transform: "translate(" + (x-13) + "," + (y-13) + ") scale(0.25)"});
-					break;
-				case "not":
-					this.attr({transform: "translate(" +  (x-34) + "," + (y-6) + ") scale(0.25)"});
-					break;
-				case "or":
-					this.attr({transform: "translate(" +  (x-27) + "," + (y-19) + ") scale(0.25)"});
-					break;
-				case "in":
-					this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
-					break;
-				case "out":
-					this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
-					break;
-			}
-			this.attr({cx: x, cy: y});
+		switch(that.logic) {
+			case "and":
+				this.attr({transform: "translate(" + (x-13) + "," + (y-13) + ") scale(0.25)"});
+				break;
+			case "not":
+				this.attr({transform: "translate(" +  (x-34) + "," + (y-6) + ") scale(0.25)"});
+				break;
+			case "or":
+				this.attr({transform: "translate(" +  (x-27) + "," + (y-19) + ") scale(0.25)"});
+				break;
+			case "in":
+				this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
+				break;
+			case "out":
+				this.attr({transform: "translate(" +  (x-17) + "," + (y-22) + ") scale(0.25)"});
+				break;
 		}
+		this.attr({cx: x, cy: y});
 	};
 
 	var onstart = function (x, y, e) {
 		
 	};
 
-	var onend = function (x, y, e) {
+	var onend = function (e) {
 		
+	};
+
+	var c_onmove = function (dx, dy, x, y, e) {
+		//console.log(this.attr("id"));
+		//console.log(x, y);
+		//var p = s.path("m " + this.attr("cx") + "," + this.attr("cy") + " l " + dx + "," + dy);
+		//p.attr({stroke: "black", "stroke-width": 15});
+	};
+
+	var c_onstart = function (x, y, e) {
+		that.gate.undrag();
+	};
+
+	var c_onend = function (e) {
+		that.gate.drag(onmove, onstart, onend);
+		s.select("#"+that.label+"CI0").undrag();
+		s.select("#"+that.label+"CI1").undrag();
+		s.select("#"+that.label+"CO0").undrag();
 	};
 
 	var onmousedown = function (e) {
 		//console.log(this.attr("logic"));
-		this.node.querySelector("#box").style.visibility = "visible";
-		if (e.button === 0) {
-			if (e.shiftKey) {
-				if (clicked.from === null || clicked.from === this) {
-					clicked.from = this;
-				} else {
-					clicked.to = this;
-				}
-			} else {
-				clicked.from = clicked.to = null; 
-			}
-		} else {
-			clicked.from = this;
+		//s.select("#"+this.attr("id")+"B").attr({visibility: "visible"});
+		if (clicked.from !== null) {
+			switch (clicked.from.logic) {
+				case "not":
+					s.select("#"+clicked.from.label+"CI0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CO0").attr({visibility: "hidden"});
+					break;
+				case "in":
+					s.select("#"+clicked.from.label+"CO0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CO1").attr({visibility: "hidden"});
+					break;
+				case "out":
+					s.select("#"+clicked.from.label+"CI0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CI1").attr({visibility: "hidden"});
+					break;
+				default:
+					s.select("#"+clicked.from.label+"CI0").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CI1").attr({visibility: "hidden"});
+					s.select("#"+clicked.from.label+"CO0").attr({visibility: "hidden"});
+					break;
+			}			
 		}
+		switch (that.logic) {
+			case "not":
+				s.select("#"+that.label+"CI0").attr({visibility: "visible"});
+				s.select("#"+that.label+"CO0").attr({visibility: "visible"});
+				break;
+			case "in":
+				s.select("#"+that.label+"CO0").attr({visibility: "visible"});
+				s.select("#"+that.label+"CO1").attr({visibility: "visible"});
+				break;
+			case "out":
+				s.select("#"+that.label+"CI0").attr({visibility: "visible"});
+				s.select("#"+that.label+"CI1").attr({visibility: "visible"});
+				break;
+			default:
+				s.select("#"+that.label+"CI0").attr({visibility: "visible"});
+				s.select("#"+that.label+"CI0").drag(c_onmove,c_onstart,c_onend);
+				s.select("#"+that.label+"CI1").attr({visibility: "visible"});
+				s.select("#"+that.label+"CI1").drag(c_onmove,c_onstart,c_onend);
+				s.select("#"+that.label+"CO0").attr({visibility: "visible"});
+				s.select("#"+that.label+"CO0").drag(c_onmove,c_onstart,c_onend);
+				break;
+		}
+		clicked.from = that;
 	};
 
 	var onmouseup = function (e) {
 
-		if (e.shiftKey) {
-			if (clicked.from !== null && clicked.to !== null) {
-				clicked.from = clicked.to = null;
-			}
-		}	
 	};
 
 	var onmouseover = function (e) {
-		this.attr({stroke: "#ff84dd", "stroke-width": 10});
+		this.attr({stroke: "#84ddff", "stroke-width": 10});
 	};
 
 	var onmouseout = function (e) {
 		this.attr({stroke: "none", "stroke-width": 0});
 	};
-
 	this.gate.drag(onmove, onstart, onend);
 	this.gate.mousedown(onmousedown);
 	this.gate.mouseup(onmouseup);
